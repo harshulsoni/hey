@@ -1,17 +1,12 @@
 ![hey](http://i.imgur.com/szzD9q0.png)
 
-[![Build Status](https://travis-ci.org/rakyll/hey.svg?branch=master)](https://travis-ci.org/rakyll/hey)
+[Note] This is not my original work. I just made some changes according to my need. The Original work is by rakyll(https://github.com/rakyll/hey) and Tarek Ziade(https://github.com/tarekziade/boom)
 
 hey is a tiny program that sends some load to a web application.
 
-hey was originally called boom and was influenced from Tarek Ziade's
-tool at [tarekziade/boom](https://github.com/tarekziade/boom). Using the same name was a mistake as it resulted in cases
-where binary name conflicts created confusion.
-To preserve the name for its original owner, we renamed this project to hey.
-
 ## Installation
 
-    go get -u github.com/rakyll/hey
+    go get -u github.com/harshulsoni/hey
 
 ## Usage
 
@@ -24,8 +19,11 @@ Usage: hey [options...] <url>
 
 Options:
   -n  Number of requests to run. Default is 200.
-  -c  Number of requests to run concurrently. Total number of requests cannot
+  -c1 Start range Number of requests to run concurrently. Total number of requests cannot
       be smaller than the concurrency level. Default is 50.
+  -c2 End range Number of requests to run concurrently. Total number of requests cannot
+      be smaller than the concurrency level. Default is 50.
+  -cd Difference by which parallel connection increase in each iterations. Difference cannot be <=0 
   -q  Rate limit, in seconds (QPS).
   -o  Output type. If none provided, a summary is printed.
       "csv" is the only supported alternative. Dumps the response
@@ -51,7 +49,5 @@ Options:
   -cpus                 Number of used cpu cores.
                         (default for current machine is 8 cores)
 ```
-
-Previously known as [github.com/rakyll/boom](https://github.com/rakyll/boom).
 
 Note: Requires go 1.7 or greater.

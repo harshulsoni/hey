@@ -20,6 +20,7 @@ import (
 	"sort"
 	"strings"
 	"time"
+	"os"
 )
 
 const (
@@ -32,7 +33,8 @@ type report struct {
 	slowest  float64
 	average  float64
 	rps      float64
-
+	size 	int
+	conn 	int
 	avgConn   float64
 	avgDNS    float64
 	avgReq    float64
@@ -57,18 +59,20 @@ type report struct {
 	w io.Writer
 }
 
-func newReport(w io.Writer, size int, results chan *result, output string, total time.Duration) *report {
+func newReport(w io.Writer, size int, conn int, results chan *result, output string, total time.Duration) *report {
 	return &report{
 		output:         output,
 		results:        results,
 		total:          total,
+		size: 			size,
+		conn: 			conn,
 		statusCodeDist: make(map[int]int),
 		errorDist:      make(map[string]int),
 		w:              w,
 	}
 }
 
-func (r *report) finalize() {
+func (r *report) finalize(f *os.File) {
 	for res := range r.results {
 		if res.err != nil {
 			r.errorDist[res.err.Error()]++
@@ -98,7 +102,7 @@ func (r *report) finalize() {
 	r.avgDNS = r.avgDNS / float64(len(r.lats))
 	r.avgReq = r.avgReq / float64(len(r.lats))
 	r.avgRes = r.avgRes / float64(len(r.lats))
-	r.print()
+	r.print(f)
 }
 
 func (r *report) printCSV() {
@@ -109,35 +113,31 @@ func (r *report) printCSV() {
 	}
 }
 
-func (r *report) print() {
+func (r *report) printoutputtocsv(f *os.File){
+	//f1, err := os.OpenFile("Output.csv", os.O_APPEND|os.O_WRONLY, 0600)
+	// if err != nil {
+	//     panic(err)
+	// }
+	
+	// if _, err = f1.WriteString(fmt.Sprintf("%d, %d, %.4f\n", r.size, r.conn, r.rps)); err != nil {
+	//     panic(err)
+	// }
+	_,_ = f.WriteString(fmt.Sprintf("%d, %d, %.4f\n", r.size, r.conn, r.rps))
+	// if err != nil {
+	//      panic(err)
+	// }
+	fmt.Printf("conc: %d done\n", r.conn)
+	//f1.Close()
+}
+
+func (r *report) print(f *os.File){
 	if r.output == "csv" {
 		r.printCSV()
 		return
 	}
 
 	if len(r.lats) > 0 {
-		sort.Float64s(r.lats)
-		r.fastest = r.lats[0]
-		r.slowest = r.lats[len(r.lats)-1]
-		r.printf("Summary:\n")
-		r.printf("  Total:\t%4.4f secs\n", r.total.Seconds())
-		r.printf("  Slowest:\t%4.4f secs\n", r.slowest)
-		r.printf("  Fastest:\t%4.4f secs\n", r.fastest)
-		r.printf("  Average:\t%4.4f secs\n", r.average)
-		r.printf("  Requests/sec:\t%4.4f\n", r.rps)
-		if r.sizeTotal > 0 {
-			r.printf("  Total data:\t%d bytes\n", r.sizeTotal)
-			r.printf("  Size/request:\t%d bytes\n", r.sizeTotal/int64(len(r.lats)))
-		}
-		r.printHistogram()
-		r.printLatencies()
-		r.printf("\nDetails (average, fastest, slowest):")
-		r.printSection("DNS+dialup", r.avgConn, r.connLats)
-		r.printSection("DNS-lookup", r.avgDNS, r.dnsLats)
-		r.printSection("req write", r.avgReq, r.reqLats)
-		r.printSection("resp wait", r.avgDelay, r.delayLats)
-		r.printSection("resp read", r.avgRes, r.resLats)
-		r.printStatusCodes()
+		r.printoutputtocsv(f)
 	}
 	if len(r.errorDist) > 0 {
 		r.printErrors()

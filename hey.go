@@ -22,12 +22,12 @@ import (
 	"net/http"
 	gourl "net/url"
 	"os"
-	"os/signal"
+	//"os/signal"
 	"regexp"
 	"runtime"
 	"strings"
 
-	"github.com/rakyll/hey/requester"
+	"./requester"
 )
 
 const (
@@ -47,7 +47,9 @@ var (
 
 	output = flag.String("o", "", "")
 
-	c = flag.Int("c", 50, "")
+	c1 = flag.Int("c1", 50, "")
+	c2 = flag.Int("c2", 50, "")
+	cd = flag.Int("cd", 100, "")
 	n = flag.Int("n", 200, "")
 	q = flag.Int("q", 0, "")
 	t = flag.Int("t", 20, "")
@@ -109,14 +111,24 @@ func main() {
 
 	runtime.GOMAXPROCS(*cpus)
 	num := *n
-	conc := *c
+	c1 := *c1
+	c2 := *c2
+	cd := *cd
 	q := *q
 
-	if num <= 0 || conc <= 0 {
-		usageAndExit("-n and -c cannot be smaller than 1.")
+	if num <= 0 || c1 <= 0 {
+		usageAndExit("-n and -c1 cannot be smaller than 1.")
 	}
 
-	if num < conc {
+	if c2<c1{
+		usageAndExit("-c2 cannot be smaller than -c1")	
+	}
+
+	if cd <= 0 {
+		usageAndExit("-cd cannot be smaller than 1")	
+	}
+
+	if num < c1 {
 		usageAndExit("-n cannot be less than -c.")
 	}
 
@@ -192,30 +204,40 @@ func main() {
 	if *hostHeader != "" {
 		req.Host = *hostHeader
 	}
-
-	w := &requester.Work{
-		Request:            req,
-		RequestBody:        bodyAll,
-		N:                  num,
-		C:                  conc,
-		QPS:                q,
-		Timeout:            *t,
-		DisableCompression: *disableCompression,
-		DisableKeepAlives:  *disableKeepAlives,
-		DisableRedirects:   *disableRedirects,
-		H2:                 *h2,
-		ProxyAddr:          proxyURL,
-		Output:             *output,
+	fmt.Printf("c1: %d\n", c1);
+	f, err := os.Create("Output.csv")
+	if _, err = f.WriteString("NumberOfRequest, NumberOfConcurrentRequests, RequestPerSec\n"); err != nil {
+	    panic(err)
 	}
+	
+	for conc := c1; conc <= c2; conc+=cd {
+		fmt.Printf("conc: %d\n", conc);
+		w := &requester.Work{
+			Request:            req,
+			RequestBody:        bodyAll,
+			N:                  num,
+			C:                  conc,
+			QPS:                q,
+			Timeout:            *t,
+			DisableCompression: *disableCompression,
+			DisableKeepAlives:  *disableKeepAlives,
+			DisableRedirects:   *disableRedirects,
+			H2:                 *h2,
+			ProxyAddr:          proxyURL,
+			Output:             *output,
+		}
 
-	c := make(chan os.Signal, 1)
-	signal.Notify(c, os.Interrupt)
-	go func() {
-		<-c
-		w.Finish()
-		os.Exit(1)
-	}()
-	w.Run()
+		// c := make(chan os.Signal, 1)
+		// signal.Notify(c, os.Interrupt)
+		// go func() {
+		// 	<-c
+		// 	w.Finish()
+		// 	//
+		// }()
+		w.Run(f)
+	}
+	f.Close()
+	os.Exit(1)
 }
 
 func errAndExit(msg string) {

@@ -40,7 +40,7 @@ type result struct {
 	dnsDuration   time.Duration // dns lookup duration
 	reqDuration   time.Duration // request "write" duration
 	resDuration   time.Duration // response "read" duration
-	delayDuration time.Duration // delay between response and request
+	delayDuration time.Duration // delay between output and request
 	contentLength int64
 }
 
@@ -99,7 +99,7 @@ func (b *Work) writer() io.Writer {
 
 // Run makes all the requests, prints the summary. It blocks until
 // all work is done.
-func (b *Work) Run() {
+func (b *Work) Run(f *os.File) {
 	// append hey's user agent
 	ua := b.Request.UserAgent()
 	if ua == "" {
@@ -113,14 +113,14 @@ func (b *Work) Run() {
 	b.start = time.Now()
 
 	b.runWorkers()
-	b.Finish()
+	b.Finish(f)
 }
 
-func (b *Work) Finish() {
+func (b *Work) Finish(f *os.File) {
 	b.stopCh <- struct{}{}
 	close(b.results)
 	total := time.Now().Sub(b.start)
-	newReport(b.writer(), b.N, b.results, b.Output, total).finalize()
+	newReport(b.writer(), b.N, b.C, b.results, b.Output, total).finalize(f)
 }
 
 func (b *Work) makeRequest(c *http.Client) {
